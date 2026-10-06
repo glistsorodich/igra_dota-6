@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ИГРА</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: 'Arial Black', sans-serif;
+    cursor: default;
+  }
+
+  #start-btn {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 22px;
+    font-family: 'Arial Black', sans-serif;
+    font-weight: bold;
+    color: #000;
+    letter-spacing: 3px;
+    animation: pulse 1.2s infinite alternate;
+    box-shadow: 0 0 40px #fff, 0 0 80px #fff;
+    z-index: 10;
+  }
+  @keyframes pulse {
+    from { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 40px #fff; }
+    to   { transform: translate(-50%, -50%) scale(1.15); box-shadow: 0 0 80px #fff, 0 0 120px #fff; }
+  }
+
+  #glitch-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0;
+    background: #000;
+  }
+  #glitch-overlay.on {
+    opacity: 1;
+    animation: glitchShake 0.08s infinite;
+  }
+  @keyframes glitchShake {
+    0%   { transform: translate(0, 0); background: #f00; }
+    25%  { transform: translate(-15px, 8px); background: #0ff; }
+    50%  { transform: translate(18px, -12px); background: #0f0; }
+    75%  { transform: translate(-12px, 15px); background: #f0f; }
+    100% { transform: translate(0, 0); background: #fff; }
+  }
+  #glitch-overlay::before,
+  #glitch-overlay::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 25%;
+    background: rgba(255,0,0,0.5);
+    mix-blend-mode: screen;
+  }
+  #glitch-overlay::before { top: 15%; animation: bar1 0.1s infinite; }
+  #glitch-overlay::after  { bottom: 15%; background: rgba(0,255,255,0.5); animation: bar2 0.12s infinite; }
+  @keyframes bar1 {
+    0% { top: 10%; } 50% { top: 70%; } 100% { top: 10%; }
+  }
+  @keyframes bar2 {
+    0% { bottom: 10%; } 50% { bottom: 75%; } 100% { bottom: 10%; }
+  }
+
+  #character {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40vw;
+    max-width: 500px;
+    height: auto;
+    opacity: 0;
+    z-index: 15;
+    transition: opacity 0.3s;
+  }
+  #character.show { opacity: 1; }
+
+  #character.talking {
+    animation: talk 0.12s infinite alternate;
+  }
+  @keyframes talk {
+    0%   { transform: translate(-50%, -50%) scale(1) rotate(-2deg); }
+    100% { transform: translate(-50%, -50%) scale(1.05) rotate(2deg); }
+  }
+
+  #subtitle {
+    position: fixed;
+    bottom: 10%;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 32px;
+    color: #fff;
+    text-shadow: 0 0 20px #f00, 0 0 40px #900;
+    letter-spacing: 3px;
+    opacity: 0;
+    z-index: 16;
+    transition: opacity 0.3s;
+    padding: 0 20px;
+  }
+  #subtitle.show { opacity: 1; }
+
+   #falling-text {
+    position: fixed;
+    top: -200px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 80px;
+    color: #fff;
+    font-family: 'Arial Black', sans-serif;
+    letter-spacing: 10px;
+    text-shadow: 0 0 30px #fff, 0 0 60px #fff;
+    z-index: 12;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  #falling-text.fall {
+    animation: textDrop 1.2s cubic-bezier(0.6, 0, 0.4, 1) forwards;
+  }
+  @keyframes textDrop {
+    0%   { top: -200px; opacity: 0; }
+    20%  { opacity: 1; }
+    80%  { top: 15vh; }
+    90%  { top: 12vh; }
+    100% { top: 15vh; opacity: 1; }
+  }
+
+  #falling-text.stay {
+    top: 20vh;
+    opacity: 1;
+  }
+
+  #falling-text.fall {
+    animation: textDrop 1.2s cubic-bezier(0.6, 0, 0.4, 1) forwards;
+  }
+  @keyframes textDrop {
+    0%   { top: -200px; opacity: 0; }
+    20%  { opacity: 1; }
+    80%  { top: 20vh; }
+    90%  { top: 17vh; }
+    100% { top: 20vh; }
+  }
+
+  #falling-text.brake {
+    animation: textBrake 0.15s infinite;
+  }
+  @keyframes textBrake {
+    0%   { transform: translateY(0) translateX(0); }
+    25%  { transform: translateY(-3px) translateX(-4px); }
+    50%  { transform: translateY(5px) translateX(4px); }
+    75%  { transform: translateY(-2px) translateX(-3px); }
+    100% { transform: translateY(0) translateX(0); }
+  }
+
+    body.impact #start-btn {
+    animation: bodyImpact 1s ease-out;
+    pointer-events: auto;
+  }
+  @keyframes bodyImpact {
+    0%   { transform: translate(-50%, -50%) translateY(0); }
+    20%  { transform: translate(-50%, -50%) translateY(40px); }
+    40%  { transform: translate(-50%, -50%) translateY(30px); }
+    60%  { transform: translate(-50%, -50%) translateY(35px); }
+    80%  { transform: translate(-50%, -50%) translateY(10px); }
+    100% { transform: translate(-50%, -50%) translateY(0); }
+  }
+
+  body.impact #falling-text.brake {
+    animation: textBrake 0.15s infinite, textImpact 1s ease-out;
+  }
+    @keyframes textImpact {
+    0%   { top: 20vh; }
+    20%  { top: calc(20vh + 40px); }
+    40%  { top: calc(20vh + 30px); }
+    60%  { top: calc(20vh + 35px); }
+    80%  { top: calc(20vh + 10px); }
+    100% { top: 20vh; }
+  }
+</style>
+</head>
+<body>
+
+<audio id="bg-music" src="bg-music.mp3" loop></audio>
+
+<button id="start-btn">НАЖМИ</button>
+<div id="glitch-overlay"></div>
+<img id="character" src="character.png" alt="">
+<div id="subtitle"></div>
+<div id="falling-text">ТЕСТ ЗАПУСК</div>
+
+<script>
+  const startBtn = document.getElementById("start-btn");
+  const glitchOverlay = document.getElementById("glitch-overlay");
+  const character = document.getElementById("character");
+  const subtitle = document.getElementById("subtitle");
+
+  const glitchSound = "glitch.mp3";
+  const voiceSound  = "voice.mp3";
+  const bgMusic = document.getElementById("bg-music");
+
+  const speechText = "ТЕСТ ЗАПУСК";
+
+  const fallingText = document.getElementById("falling-text");
+
+  window.addEventListener("load", () => {
+    bgMusic.volume = 0.8;
+    bgMusic.play().catch(e => {
+      console.log("Автоплей заблокирован:", e);
+      document.body.addEventListener("click", () => {
+        bgMusic.volume = 0.8;
+        bgMusic.play().catch(e => console.log(e));
+      }, { once: true });
+    });
+
+    setTimeout(() => {
+      fallingText.classList.add("fall");
+
+      setTimeout(() => {
+        fallingText.classList.remove("fall");
+        fallingText.classList.add("stay");
+        fallingText.classList.add("brake");
+        document.body.classList.add("impact");
+
+        setTimeout(() => {
+          fallingText.classList.remove("brake");
+          fallingText.classList.add("stay");
+          document.body.classList.remove("impact");
+        }, 1000);
+
+      }, 1200);
+
+    }, 500);
+  });
+
+  setTimeout(() => {
+    bgMusic.pause();
+  }, 64000);
+
+  let isPlaying = false;
+
+  startBtn.addEventListener("click", async () => {
+    if (isPlaying) return;
+    isPlaying = true;
+
+    startBtn.style.display = "none";
+
+    bgMusic.pause();
+    bgMusic.currentTime = 0;
+
+    try {
+      const glitchAudio = new Audio(glitchSound);
+      glitchAudio.volume = 1.0;
+      glitchAudio.play().catch(e => console.log("glitch:", e));
+    } catch(e) {}
+
+    glitchOverlay.classList.add("on");
+
+    setTimeout(() => {
+      glitchOverlay.classList.remove("on");
+
+      character.classList.add("show");
+
+      setTimeout(() => {
+        character.classList.add("talking");
+        subtitle.innerText = speechText;
+        subtitle.classList.add("show");
+
+        try {
+          const voiceAudio = new Audio(voiceSound);
+          voiceAudio.volume = 1.0;
+          voiceAudio.play().catch(e => console.log("voice:", e));
+
+          voiceAudio.onended = () => {
+            character.classList.remove("talking");
+            subtitle.classList.remove("show");
+            setTimeout(() => {
+              startBtn.style.display = "block";
+              isPlaying = false;
+            }, 1000);
+          };
+
+          setTimeout(() => {
+            character.classList.remove("talking");
+            subtitle.classList.remove("show");
+            startBtn.style.display = "block";
+            isPlaying = false;
+          }, 5000);
+
+        } catch(e) {
+          setTimeout(() => {
+            character.classList.remove("talking");
+            subtitle.classList.remove("show");
+            startBtn.style.display = "block";
+            isPlaying = false;
+          }, 3000);
+        }
+
+      }, 500);
+
+    }, 2000);
+  });
+</script>
+</body>
+</html>
